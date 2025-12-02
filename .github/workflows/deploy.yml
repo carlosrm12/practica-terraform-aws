@@ -1,4 +1,4 @@
-name: Despliegue Produccion
+name: Despliegue Produccion (TF Cloud)
 
 on:
   push:
@@ -23,28 +23,33 @@ jobs:
       uses: hashicorp/setup-terraform@v1
       with:
         terraform_version: 1.5.0
+        # Esto configura el token automáticamente para el setup, 
+        # pero es mejor ser explicito en los pasos siguientes.
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
     - name: Terraform Init
       run: terraform init
       env:
-	TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        # Token para hablar con la nube de HashiCorp (Memoria)
+        TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        # Credenciales para hablar con AWS (Infraestructura)
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
         AWS_REGION: us-east-1
 
-    # AQUÍ PASAMOS EL HASH DEL COMMIT
     - name: Terraform Apply
+      # Pasamos el hash del commit para que detecte cambios en el código
       run: terraform apply -auto-approve -var="commit_hash=${{ github.sha }}"
       env:
-	TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
         AWS_REGION: us-east-1
 
-    # FORZAMOS EL REFRESCO DE INSTANCIAS
-    - name: Instance Refresh
+    - name: Instance Refresh (Zero Downtime)
+      # Este paso usa AWS CLI directamente para rotar las instancias
       run: |
         aws autoscaling start-instance-refresh \
           --auto-scaling-group-name asg-final-pro \

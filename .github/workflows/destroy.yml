@@ -1,28 +1,36 @@
-name: DESTRUIR TODO (Ahorro)
+name: DESTRUIR TODO (TF Cloud)
 
 on:
   workflow_dispatch:
 
 jobs:
   destroy:
+    name: 'Terraform Destroy'
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.5.0
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
     - name: Terraform Init
       run: terraform init
       env:
-	TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
         AWS_REGION: us-east-1
+
     - name: Terraform Destroy
       run: terraform destroy -auto-approve
       env:
-	TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
