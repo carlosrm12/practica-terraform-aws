@@ -1,11 +1,10 @@
-name: Despliegue AWS Terraform
+name: Despliegue Produccion
 
 on:
-  # Se ejecuta al hacer push
   push:
-    branches:
-      - main
-  # Y TAMBIÉN se ejecuta manualmente cuando tú quieras
+    branches: [ "main" ]
+    paths-ignore:
+      - 'README.md'
   workflow_dispatch:
 
 permissions:
@@ -13,21 +12,18 @@ permissions:
 
 jobs:
   terraform:
-    name: 'Terraform Build'
+    name: 'Deploy'
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Descargar tu código
-    - name: Checkout
+    - name: Checkout Code
       uses: actions/checkout@v3
 
-    # 2. Instalar Terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
       with:
         terraform_version: 1.5.0
 
-    # 3. Inicializar (Descargar plugins de AWS)
     - name: Terraform Init
       run: terraform init
       env:
@@ -36,10 +32,21 @@ jobs:
         AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
         AWS_REGION: us-east-1
 
-    # 4. Aplicar los cambios
+    # AQUÍ PASAMOS EL HASH DEL COMMIT
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
-      run: terraform apply -auto-approve
+      run: terraform apply -auto-approve -var="commit_hash=${{ github.sha }}"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+        AWS_REGION: us-east-1
+
+    # FORZAMOS EL REFRESCO DE INSTANCIAS
+    - name: Instance Refresh
+      run: |
+        aws autoscaling start-instance-refresh \
+          --auto-scaling-group-name asg-final-pro \
+          --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 120}'
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
