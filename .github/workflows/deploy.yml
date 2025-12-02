@@ -48,9 +48,35 @@ jobs:
         AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
         AWS_REGION: us-east-1
 
-    - name: Instance Refresh (Zero Downtime)
-      # Este paso usa AWS CLI directamente para rotar las instancias
+    - name: Instance Refresh (Smart Wait)
       run: |
+        echo "1. Intentando cancelar refrescos anteriores..."
+        aws autoscaling cancel-instance-refresh --auto-scaling-group-name asg-final-pro || true
+        
+        echo "2. Esperando a que el estado esté limpio (Status: Cancelled o Successful)..."
+        
+        # Bucle 'While': Pregunta a AWS hasta que el estado sea seguro
+        while true; do
+          # Obtenemos el estado actual del refresh
+          STATUS=$(aws autoscaling describe-instance-refreshes \
+            --auto-scaling-group-name asg-final-pro \
+            --query 'InstanceRefreshes[0].Status' \
+            --output text)
+            
+          echo "Estado actual: $STATUS"
+          
+          # Si no hay refresh, o ya se canceló, o terminó bien/mal... ¡SALIMOS!
+          if [ "$STATUS" == "None" ] || [ "$STATUS" == "Cancelled" ] || [ "$STATUS" == "Successful" ] || [ "$STATUS" == "Failed" ]; then
+            echo "¡El ASG está libre para un nuevo despliegue!"
+            break
+          fi
+          
+          # Si sigue "InProgress" o "Cancelling", esperamos 5s y volvemos a preguntar
+          echo "El ASG sigue ocupado... esperando 5 segundos..."
+          sleep 5
+        done
+        
+        echo "3. Iniciando nuevo refresco..."
         aws autoscaling start-instance-refresh \
           --auto-scaling-group-name asg-final-pro \
           --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 120}'
