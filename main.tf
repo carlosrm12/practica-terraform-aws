@@ -4,11 +4,13 @@
 # 1. CONFIGURACIÓN DEL ESTADO (S3)
 # ---------------------------------------------------------
 terraform {
-  backend "s3" {
-    # ⚠️ CAMBIO 1: PON EL NOMBRE DE TU BUCKET AQUÍ
-    bucket = "tf-practica-html" 
-    key    = "prod/terraform.tfstate"
-    region = "us-east-1"
+  # Usamos la nube de HashiCorp en lugar de S3
+  cloud {
+    organization = "org-distribuida-carlos-practica" # Ej: org-estudiante-carlos
+
+    workspaces {
+      name = "practica-aws" # El nombre que pusiste al workspace
+    }
   }
 }
 
