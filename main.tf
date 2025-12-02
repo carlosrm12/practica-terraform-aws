@@ -49,7 +49,7 @@ data "aws_subnets" "mis_subnets" {
 
 # SG del Load Balancer: Acepta tráfico de todo el mundo (Internet)
 resource "aws_security_group" "alb_sg" {
-  name        = "sg-load-balancer-tf"
+  name        = "alb-security-group-tf"
   description = "Permitir HTTP publico"
   vpc_id      = data.aws_vpc.default.id
 
@@ -70,7 +70,7 @@ resource "aws_security_group" "alb_sg" {
 
 # SG de las Instancias: Solo acepta tráfico del Load Balancer
 resource "aws_security_group" "instancia_sg" {
-  name        = "sg-instancias-tf"
+  name        = "instancias-security-group-tf"
   description = "Trafico interno desde ALB"
   vpc_id      = data.aws_vpc.default.id
 
